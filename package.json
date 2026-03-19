@@ -1,0 +1,11 @@
+{
+  "name": "dark-survival-boss-test",
+  "version": "1.0.0",
+  "main": "dark-survival-boss-test.js",
+  "scripts": {
+    "start": "node dark-survival-boss-test.js"
+  },
+  "dependencies": {
+    "ws": "^8.14.2"
+  }
+}
