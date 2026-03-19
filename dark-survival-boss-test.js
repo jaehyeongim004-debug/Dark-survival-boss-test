@@ -1569,7 +1569,7 @@ window.addEventListener('resize',()=>{W=G.clientWidth;H=G.clientHeight;canvas.wi
 </script>
 
 <style>
-#testPanel{position:fixed;top:10px;right:10px;z-index:100;background:rgba(0,0,0,0.85);border:1px solid #553;border-radius:8px;padding:10px;font-size:11px;color:#ccc;min-width:140px;}
+#testPanel{position:fixed;top:10px;left:10px;z-index:100;background:rgba(0,0,0,0.85);border:1px solid #553;border-radius:8px;padding:10px;font-size:11px;color:#ccc;min-width:140px;}
 #testPanel button{display:block;width:100%;margin:3px 0;padding:5px 8px;background:#222;border:1px solid #444;color:#ccc;border-radius:4px;cursor:pointer;font-size:10px;font-family:monospace;}
 #testPanel button:hover{background:#333;color:#fff;}
 #testPanel button.active{background:#442;border-color:#aa8;color:#ff8;}
@@ -1603,6 +1603,12 @@ let testBossHpMult = 1.0;
 function showTestPanel(){document.getElementById('testPanel').style.display='block';}
 
 function testSpawnBoss(isFinal){
+  // 클라이언트 상태 미리 설정 (서버 응답 전에 렌더링 준비)
+  bossAlive=true;
+  bossWarning=null;
+  running=true;
+  if(isFinal){finalBossSpawned=true;}
+  else{midBossSpawned=true;}
   send({t:'testSpawnBoss',isFinal,hpMult:testBossHpMult});
   showPop((isFinal?'☠ 최종보스':'⚔ 중간보스')+' 소환!',2000);
 }
@@ -1615,11 +1621,27 @@ function testToggleInvincible(){
   const btn=document.getElementById('btnInvincible');
   btn.textContent='🛡 무적 '+(testInvincible?'ON':'OFF');
   btn.className=testInvincible?'active':'';
+  if(testInvincible) showPop('🛡 무적 ON - 데미지 없음',1500);
+  else showPop('무적 OFF',1000);
+}
+
+// 무적 상태를 applyState가 건드리지 못하도록 override
+const _origApplyState = applyState;
+function applyState(msg){
+  _origApplyState(msg);
+  // 테스트 무적이 켜져있으면 applyState 후에도 유지
+  if(testInvincible){invincible=true;invincibleEnd=Infinity;}
 }
 
 function testHeal(){
-  if(myPlayer&&myStats){myPlayer.hp=myStats.maxHp;}
+  if(myPlayer&&myStats){
+    myPlayer.hp=myStats.maxHp;
+    myPlayer.dead=false;
+    myPlayer.groggy=false;
+    running=true;
+  }
   send({t:'testHeal'});
+  showPop('💊 HP 회복!',1000);
 }
 
 function testPhase2(){
@@ -1642,8 +1664,6 @@ function testRestart(){
   location.reload();
 }
 </script>
-</body>
-</html>
 <script>
 // 테스트 서버: 자동 접속 + 직업선택 바로 시작
 window.addEventListener('DOMContentLoaded', ()=>{
@@ -1670,7 +1690,8 @@ const _origHandleMsg = handleMsg;
 const _testOrigInit = initGameState;
 window._testInitDone = false;
 </script>
-`;
+</body>
+</html>`;
 
 // ── SERVER ─────────────────────────────────────────────────
 const server = http.createServer((req, res) => {
